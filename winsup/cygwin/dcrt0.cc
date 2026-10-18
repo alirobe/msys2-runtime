@@ -851,7 +851,7 @@ any_module_moved ()
 /* Every DLL and exe in our own DLL's directory.  A program this process
    tree spawns later links DLLs none of us has loaded, and those are still
    on the layer until something reads them; spawn reads the exe itself.
-   Only reached when a module of ours moved, so once per such container.  */
+   Run by the re-exec'd process, so once per such container.  */
 static void
 promote_siblings ()
 {
@@ -892,13 +892,15 @@ reexec_if_mapped_from_layer ()
   WCHAR marker[2];
   if (GetEnvironmentVariableW (L"MSYS2_RUNTIME_REEXEC", marker, 2))
     {
+      /* The re-exec'd process: our own modules are mapped from the volume
+	 now; move the rest before anything is spawned.  */
       SetEnvironmentVariableW (L"MSYS2_RUNTIME_REEXEC", NULL);
+      promote_siblings ();
       return;
     }
 
   if (!any_module_moved ())
     return;
-  promote_siblings ();
 
   if (!SetEnvironmentVariableW (L"MSYS2_RUNTIME_REEXEC", L"1"))
     return;
