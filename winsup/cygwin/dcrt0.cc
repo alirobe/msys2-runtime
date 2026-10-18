@@ -848,6 +848,41 @@ any_module_moved ()
   return false;
 }
 
+/* Every DLL and exe in our own DLL's directory.  A program this process
+   tree spawns later links DLLs none of us has loaded, and those are still
+   on the layer until something reads them; spawn reads the exe itself.
+   Only reached when a module of ours moved, so once per such container.  */
+static void
+promote_siblings ()
+{
+  static WCHAR path[NT_MAX_PATH] NO_COPY;
+  DWORD len = GetModuleFileNameW (cygwin_hmodule, path, NT_MAX_PATH);
+  if (!len || len >= NT_MAX_PATH)
+    return;
+  PWCHAR base = wcsrchr (path, L'\\');
+  if (!base)
+    return;
+  base++;
+  size_t room = NT_MAX_PATH - (base - path);
+  static const PCWSTR patterns[] = { L"*.dll", L"*.exe" };
+  for (PCWSTR pattern : patterns)
+    {
+      wcscpy (base, pattern);
+      WIN32_FIND_DATAW fd;
+      HANDLE hf = FindFirstFileW (path, &fd);
+      if (hf == INVALID_HANDLE_VALUE)
+	continue;
+      do
+	if (wcslen (fd.cFileName) < room)
+	  {
+	    wcscpy (base, fd.cFileName);
+	    promote (path);
+	  }
+      while (FindNextFileW (hf, &fd));
+      FindClose (hf);
+    }
+}
+
 static void
 reexec_if_mapped_from_layer ()
 {
@@ -863,6 +898,7 @@ reexec_if_mapped_from_layer ()
 
   if (!any_module_moved ())
     return;
+  promote_siblings ();
 
   if (!SetEnvironmentVariableW (L"MSYS2_RUNTIME_REEXEC", L"1"))
     return;
