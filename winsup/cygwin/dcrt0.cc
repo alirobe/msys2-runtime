@@ -761,16 +761,21 @@ section_name (PVOID addr, section_name_buf &u)
   return NT_SUCCESS (status) ? &u.msn.SectionFileName : NULL;
 }
 
-/* Open PATH for reading and close it again.  In a Server 2019 container
-   this is what moves a layer file onto the volume; elsewhere it changes
-   nothing.  Also called from dlopen, ahead of LoadLibrary.  */
+/* Open PATH for reading, read its first byte and close it again.  In a
+   Server 2019 container this is what moves a layer file onto the volume;
+   elsewhere it changes nothing.  Also called from dlopen, ahead of
+   LoadLibrary.  */
 void
 promote (PCWSTR path)
 {
   HANDLE h = CreateFileW (path, GENERIC_READ, FILE_SHARE_VALID_FLAGS, NULL,
 			  OPEN_EXISTING, 0, NULL);
-  if (h != INVALID_HANDLE_VALUE)
-    CloseHandle (h);
+  if (h == INVALID_HANDLE_VALUE)
+    return;
+  BYTE b;
+  DWORD n;
+  ReadFile (h, &b, 1, &n, NULL);
+  CloseHandle (h);
 }
 
 /* Which file does a fresh mapping of PATH come from, now?  */
