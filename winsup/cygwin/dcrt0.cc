@@ -925,6 +925,10 @@ reexec_if_mapped_from_layer ()
       return;
     }
   CloseHandle (pi.hThread);
+  /* We wait inside DllMain, under the loader lock, so a console event's
+     handler thread could not start here until we exit.  Leave the console
+     and its events to the child.  */
+  FreeConsole ();
   WaitForSingleObject (pi.hProcess, INFINITE);
   DWORD code = 1;
   GetExitCodeProcess (pi.hProcess, &code);
