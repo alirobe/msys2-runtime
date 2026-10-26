@@ -443,7 +443,7 @@ find_on_path (const char *in_file, const char *ext, bool showall = false,
       return 0;
     }
 
-  char *hasext = strrchr (file, '.');
+  const char *hasext = strrchr (file, '.');
   if (hasext && !strpbrk (hasext, "/\\"))
     ext = "";
 
@@ -978,7 +978,7 @@ cygcheck (const char *app)
     }
 
   char *s;
-  char *sep = strpbrk (papp, ":/\\");
+  const char *sep = strpbrk (papp, ":/\\");
   if (!sep)
     {
       static char dot[] = ".";
